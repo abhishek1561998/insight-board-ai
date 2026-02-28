@@ -49,11 +49,11 @@ export async function findSubmissionWithJobByHash(
     WHERE s.normalized_hash = ${normalizedHash}
   `;
 
-  if (rows.length === 0) {
+  const row = rows[0];
+  if (!row) {
     return null;
   }
 
-  const row = rows[0];
   return {
     submissionId: row.submissionId as string,
     transcript: row.transcript as string,
@@ -106,11 +106,11 @@ export async function findJob(jobId: string): Promise<JobRow | null> {
     WHERE j.id = ${jobId}
   `;
 
-  if (rows.length === 0) {
+  const row = rows[0];
+  if (!row) {
     return null;
   }
 
-  const row = rows[0];
   return {
     jobId: row.jobId as string,
     submissionId: row.submissionId as string,
