@@ -36,17 +36,17 @@ class JobQueue {
 
   private async processJob(jobId: string): Promise<void> {
     try {
-      markJobProcessing(jobId);
-      const job = findJob(jobId);
+      await markJobProcessing(jobId);
+      const job = await findJob(jobId);
 
       if (!job) {
         return;
       }
 
       const graph = await buildGraphFromTranscript(job.transcript);
-      markJobCompleted(jobId, JSON.stringify(graph), graph.metadata.sourceModel);
+      await markJobCompleted(jobId, JSON.stringify(graph), graph.metadata.sourceModel);
     } catch (error) {
-      markJobFailed(jobId, error instanceof Error ? error.message : 'Unknown processing failure');
+      await markJobFailed(jobId, error instanceof Error ? error.message : 'Unknown processing failure');
     }
   }
 }

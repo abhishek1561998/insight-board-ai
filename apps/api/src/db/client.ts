@@ -1,48 +1,42 @@
-import Database from 'better-sqlite3';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { neon } from '@neondatabase/serverless';
 
 import { env } from '../config/env.js';
 
-function resolveDatabasePath(databaseUrl: string): string {
-  if (!databaseUrl.startsWith('file:')) {
-    throw new Error('DATABASE_URL must be a sqlite file URL, e.g. file:./data/dev.db');
-  }
-
-  const relativePath = databaseUrl.slice('file:'.length);
-  const currentFile = fileURLToPath(import.meta.url);
-  const appRoot = path.resolve(path.dirname(currentFile), '../../');
-  return path.resolve(appRoot, relativePath);
+if (!env.POSTGRES_URL) {
+  throw new Error('POSTGRES_URL environment variable is required');
 }
 
-export const db = new Database(resolveDatabasePath(env.DATABASE_URL));
+export const sql = neon(env.POSTGRES_URL);
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-export function initDatabase(): void {
-  db.exec(`
+export async function initDatabase(): Promise<void> {
+  await sql`
     CREATE TABLE IF NOT EXISTS submissions (
       id TEXT PRIMARY KEY,
       transcript TEXT NOT NULL,
       normalized_hash TEXT NOT NULL UNIQUE,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL
+    )
+  `;
 
+  await sql`
     CREATE TABLE IF NOT EXISTS jobs (
       id TEXT PRIMARY KEY,
-      submission_id TEXT NOT NULL UNIQUE,
+      submission_id TEXT NOT NULL UNIQUE REFERENCES submissions(id) ON DELETE CASCADE,
       status TEXT NOT NULL,
       error TEXT,
       graph_json TEXT,
       source_model TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      FOREIGN KEY(submission_id) REFERENCES submissions(id) ON DELETE CASCADE
-    );
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL
+    )
+  `;
 
-    CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
-    CREATE INDEX IF NOT EXISTS idx_jobs_updated_at ON jobs(updated_at);
-  `);
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_jobs_updated_at ON jobs(updated_at)
+  `;
 }

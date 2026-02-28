@@ -12,7 +12,7 @@ Take-home implementation for **InsightBoard AI**. This project converts meeting 
 
 - Frontend: Next.js (App Router), TypeScript, Tailwind CSS, React Flow
 - Backend: Express, TypeScript
-- Database: SQLite
+- Database: Vercel Postgres (PostgreSQL)
 - LLM API: OpenAI (with deterministic heuristic fallback if `OPENAI_API_KEY` is not set)
 
 ## Monorepo Structure
@@ -118,13 +118,21 @@ copy apps\api\.env.example apps\api\.env
 copy apps\web\.env.example apps\web\.env.local
 ```
 
-3. Initialize DB schema:
+3. Set up environment variables in `apps/api/.env`:
+
+```bash
+POSTGRES_URL=postgres://user:pass@host:5432/dbname
+OPENAI_API_KEY=sk-...  # optional
+WEB_ORIGIN=http://localhost:3000
+```
+
+4. Initialize DB schema (requires POSTGRES_URL):
 
 ```bash
 npm run db:init
 ```
 
-4. Run API + Web:
+5. Run API + Web:
 
 ```bash
 npm run dev
@@ -161,9 +169,12 @@ Covers:
 
 ## Deployment Notes
 
-- Web can be deployed to Vercel
-- API can be deployed to Render/Railway
-- For production, switch SQLite to PostgreSQL and move queue to Redis/BullMQ
+- Web and API can both be deployed to Vercel
+- Database: Uses Vercel Postgres - create a Postgres database in your Vercel project and link it
+- Environment variables needed in Vercel:
+  - `POSTGRES_URL` - automatically set when you link Vercel Postgres
+  - `OPENAI_API_KEY` - optional, for LLM task extraction
+  - `WEB_ORIGIN` - set to your web app URL for CORS
 
 ## Submission Checklist Mapping
 

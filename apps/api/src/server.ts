@@ -2,7 +2,7 @@ import { env } from './config/env.js';
 import { initDatabase } from './db/client.js';
 import { createApp } from './app.js';
 
-initDatabase();
+await initDatabase();
 const app = createApp();
 
 const server = app.listen(env.PORT, () => {
