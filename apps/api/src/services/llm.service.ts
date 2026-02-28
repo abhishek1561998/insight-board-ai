@@ -1,5 +1,5 @@
 import { llmTaskListSchema, type Task } from '@insightboard/shared';
-import OpenAI from 'openai';
+import { OpenAI } from 'openai';
 
 import { env } from '../config/env.js';
 
