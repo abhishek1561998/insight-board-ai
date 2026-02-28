@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "buildCommand": "cd ../.. && npm install && npm run build -w @insightboard/shared && npm run build -w @insightboard/web",
+  "outputDirectory": ".next",
+  "framework": "nextjs"
+}

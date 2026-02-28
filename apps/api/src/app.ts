@@ -17,9 +17,18 @@ async function ensureDb(): Promise<void> {
 
 const app = express();
 
+const allowedOrigins = env.WEB_ORIGIN.split(',').map((o) => o.trim());
+
 app.use(
   cors({
-    origin: env.WEB_ORIGIN,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
   }),
 );
 app.use(express.json({ limit: '2mb' }));
