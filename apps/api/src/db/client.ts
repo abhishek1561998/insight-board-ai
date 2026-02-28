@@ -1,12 +1,22 @@
-import { neon } from '@neondatabase/serverless';
+import { neon, type NeonQueryFunction } from '@neondatabase/serverless';
 
 import { env } from '../config/env.js';
 
-if (!env.POSTGRES_URL) {
-  throw new Error('POSTGRES_URL environment variable is required');
+let sqlClient: NeonQueryFunction<false, false> | null = null;
+
+function getClient(): NeonQueryFunction<false, false> {
+  if (!sqlClient) {
+    if (!env.POSTGRES_URL) {
+      throw new Error('POSTGRES_URL environment variable is required');
+    }
+    sqlClient = neon(env.POSTGRES_URL);
+  }
+  return sqlClient;
 }
 
-export const sql = neon(env.POSTGRES_URL);
+export function sql(strings: TemplateStringsArray, ...values: unknown[]) {
+  return getClient()(strings, ...values);
+}
 
 export async function initDatabase(): Promise<void> {
   await sql`

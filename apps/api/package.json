@@ -13,6 +13,7 @@
   "dependencies": {
     "@insightboard/shared": "1.0.0",
     "@neondatabase/serverless": "^0.10.4",
+    "@vercel/node": "^5.1.8",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
