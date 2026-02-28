@@ -1,11 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "cd ../.. && npm run build -w @insightboard/shared && npm run build -w @insightboard/api",
-  "installCommand": "cd ../.. && npm install",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/api"
+      "src": "src/app.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/app.ts"
     }
   ]
 }
