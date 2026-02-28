@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-import { createApp } from './app.js';
-import { initDatabase } from './db/client.js';
+import { createApp } from '../src/app.js';
+import { initDatabase } from '../src/db/client.js';
 
 const app = createApp();
 

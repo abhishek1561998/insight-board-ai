@@ -2,19 +2,10 @@
   "version": 2,
   "buildCommand": "cd ../.. && npm run build -w @insightboard/shared && npm run build -w @insightboard/api",
   "installCommand": "cd ../.. && npm install",
-  "functions": {
-    "src/handler.ts": {
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/src/handler.ts"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/src/handler.ts"
+      "destination": "/api"
     }
   ]
 }
