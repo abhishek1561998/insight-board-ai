@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build -w @insightboard/shared && npm run build -w @insightboard/api",
+  "installCommand": "npm install",
+  "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    }
+  ],
+  "functions": {
+    "api/index.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  }
+}
