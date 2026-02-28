@@ -1,48 +1,46 @@
 # InsightBoard Dependency Engine
 
-Take-home implementation for **InsightBoard AI**. This project converts meeting transcripts into a validated task dependency graph with persistence, async jobs, idempotent submissions, and interactive graph UI.
+A full-stack application that converts meeting transcripts into validated task dependency graphs using AI. Features async job processing, idempotent submissions, and an interactive graph visualization UI.
 
 ## Assignment Level Coverage
 
-- Level 1 (Required): Completed
-- Level 2 (Bonus): Completed
-- Level 3 (Bonus): Completed
+- **Level 1 (Required):** ✅ Completed
+- **Level 2 (Bonus):** ✅ Completed
+- **Level 3 (Bonus):** ✅ Completed
 
 ## Tech Stack
 
-- Frontend: Next.js (App Router), TypeScript, Tailwind CSS, React Flow
-- Backend: Express, TypeScript
-- Database: Vercel Postgres (PostgreSQL)
-- LLM API: OpenAI (with deterministic heuristic fallback if `OPENAI_API_KEY` is not set)
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS, React Flow |
+| Backend | Express.js, TypeScript |
+| Database | PostgreSQL (Vercel Postgres) |
+| LLM | OpenAI GPT-4.1-mini (with heuristic fallback) |
 
 ## Monorepo Structure
 
-```text
-insightAI/
-  apps/
-    api/
-      data/
-      src/
-        config/
-        db/
-        lib/
-        routes/
-        services/
-        worker/
-    web/
-      src/
-        app/
-        components/
-        lib/
-  packages/
-    shared/
-      src/
-  data/
-    input-transcript.txt
-  scripts/
-    submit-sample.mjs
-  docs/
-    ARCHITECTURE.md
+```
+insight-board-ai/
+├── apps/
+│   ├── api/                    # Express backend
+│   │   └── src/
+│   │       ├── config/         # Environment configuration
+│   │       ├── db/             # Database client & repository
+│   │       ├── lib/            # Dependency engine & utilities
+│   │       ├── routes/         # API route handlers
+│   │       ├── services/       # LLM & graph services
+│   │       └── worker/         # Async job queue
+│   └── web/                    # Next.js frontend
+│       └── src/
+│           ├── app/            # App router pages
+│           ├── components/     # React components
+│           └── lib/            # API client & graph utilities
+├── packages/
+│   └── shared/                 # Shared TypeScript schemas
+├── data/
+│   └── input-transcript.txt    # Sample transcript
+└── scripts/
+    └── submit-sample.mjs       # CLI script to test API
 ```
 
 ## Core Features
@@ -52,7 +50,7 @@ insightAI/
 - Strict LLM output schema (`id`, `description`, `priority`, `dependencies[]`)
 - Dependency sanitization for hallucinated/non-existent IDs
 - Cycle detection without crashing; cycle tasks flagged as `Error`
-- Transcript + generated graph persistence in SQLite
+- Transcript + generated graph persistence in PostgreSQL
 
 ### Level 2 - Async + Idempotency
 
@@ -68,31 +66,50 @@ insightAI/
 
 ## API Contract
 
-- `POST /api/jobs`
+### `POST /api/jobs`
 
+Submit a transcript for processing.
+
+**Request:**
 ```json
 {
-  "transcript": "..."
+  "transcript": "Meeting notes discussing project tasks..."
 }
 ```
 
-Response:
-
+**Response:**
 ```json
 {
-  "jobId": "clx...",
+  "jobId": "abc123",
   "status": "pending",
   "deduplicated": false
 }
 ```
 
-- `GET /api/jobs/:jobId`
+### `GET /api/jobs/:jobId`
 
-Returns status plus graph once completed.
+Poll for job status and retrieve results.
+
+**Response (completed):**
+```json
+{
+  "jobId": "abc123",
+  "status": "completed",
+  "tasks": [
+    {
+      "id": "task-1",
+      "description": "Design database schema",
+      "priority": "high",
+      "dependencies": [],
+      "state": "Ready"
+    }
+  ]
+}
+```
 
 ## Cycle Detection Logic
 
-- The backend builds a directed graph: task -> dependencies
+- The backend builds a directed graph: task → dependencies
 - Tarjan's strongly connected components algorithm identifies cycles
 - Any SCC with size > 1 is a cycle; self-loop also counts
 - Tasks in cycles are marked `Error` with reason `Circular dependency detected`
@@ -105,80 +122,111 @@ Returns status plus graph once completed.
 
 ## Local Setup
 
-1. Install dependencies:
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL database (or use Vercel Postgres)
+
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. Configure env files:
+### 2. Configure environment variables
+
+Create a `.env` file in the project root:
 
 ```bash
-copy apps\api\.env.example apps\api\.env
-copy apps\web\.env.example apps\web\.env.local
-```
+# Database
+DATABASE_URL=file:./data/dev.db
 
-3. Set up environment variables in `apps/api/.env`:
+# OpenAI Configuration
+OPENAI_API_KEY=sk-proj-your-api-key-here
+OPENAI_MODEL=gpt-4.1-mini
 
-```bash
-POSTGRES_URL=postgres://user:pass@host:5432/dbname
-OPENAI_API_KEY=sk-...  # optional
+# Server
+PORT=8080
 WEB_ORIGIN=http://localhost:3000
 ```
 
-4. Initialize DB schema (requires POSTGRES_URL):
+Create `apps/web/.env.local`:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+```
+
+### 3. Initialize database
 
 ```bash
 npm run db:init
 ```
 
-5. Run API + Web:
+### 4. Start development servers
 
 ```bash
 npm run dev
 ```
 
-- API: `http://localhost:8080`
-- Web: `http://localhost:3000`
+This starts both servers concurrently:
+- **API:** http://localhost:8080
+- **Web:** http://localhost:3000
 
-## Run With Provided Transcript
+## Testing with Sample Transcript
 
-Your provided transcript is included at `data/input-transcript.txt`.
+A sample transcript is included at `data/input-transcript.txt`.
 
-1. Start the API:
+**Option 1:** Use the web UI at http://localhost:3000
 
-```bash
-npm run dev -w @insightboard/api
-```
-
-2. In another terminal run:
+**Option 2:** Use the CLI script:
 
 ```bash
 npm run sample:run
 ```
 
-## Tests
+## Running Tests
 
 ```bash
 npm test
 ```
 
-Covers:
-- invalid dependency sanitization
-- cycle detection behavior
+Test coverage includes:
+- Invalid dependency sanitization
+- Cycle detection behavior
+- Hash-based idempotency
 
-## Deployment Notes
+## Deployment
 
-- Web and API can both be deployed to Vercel
-- Database: Uses Vercel Postgres - create a Postgres database in your Vercel project and link it
-- Environment variables needed in Vercel:
-  - `POSTGRES_URL` - automatically set when you link Vercel Postgres
-  - `OPENAI_API_KEY` - optional, for LLM task extraction
-  - `WEB_ORIGIN` - set to your web app URL for CORS
+### Vercel Deployment
 
-## Submission Checklist Mapping
+Both apps can be deployed to Vercel:
 
-- GitHub repository: this codebase
-- Live hosted app: deploy web + api as above
-- README includes: level completed, stack/LLM API, cycle detection, idempotency, setup steps
-# insight-board-ai
+1. **API:** Deploy `apps/api` as a serverless function
+2. **Web:** Deploy `apps/web` as a Next.js app
+
+### Environment Variables (Production)
+
+**API (`apps/api`):**
+| Variable | Description |
+|----------|-------------|
+| `POSTGRES_URL` | PostgreSQL connection string (auto-set with Vercel Postgres) |
+| `OPENAI_API_KEY` | OpenAI API key for task extraction |
+| `OPENAI_MODEL` | Model to use (default: `gpt-4.1-mini`) |
+| `WEB_ORIGIN` | Frontend URL for CORS |
+
+**Web (`apps/web`):**
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | Backend API URL |
+
+## Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start API and Web in development mode |
+| `npm run build` | Build all packages and apps |
+| `npm test` | Run test suite |
+| `npm run db:init` | Initialize database schema |
+| `npm run sample:run` | Submit sample transcript via CLI |
+| `npm run lint` | Run linters across workspaces |
+| `npm run format` | Format code with Prettier |
