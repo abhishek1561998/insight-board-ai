@@ -109,7 +109,7 @@ jobRouter.post('/jobs', async (req, res) => {
   const transcript = parsed.data.transcript.trim();
   const normalizedHash = transcriptHash(transcript);
 
-  const existing = findSubmissionWithJobByHash(normalizedHash);
+  const existing = await findSubmissionWithJobByHash(normalizedHash);
 
   if (existing?.jobId) {
     return res.status(202).json({
@@ -120,7 +120,7 @@ jobRouter.post('/jobs', async (req, res) => {
   }
 
   try {
-    const created = createSubmissionWithJob(transcript, normalizedHash);
+    const created = await createSubmissionWithJob(transcript, normalizedHash);
 
     jobQueue.enqueue(created.jobId);
 
@@ -130,7 +130,7 @@ jobRouter.post('/jobs', async (req, res) => {
       deduplicated: false,
     });
   } catch (error) {
-    const fallback = findSubmissionWithJobByHash(normalizedHash);
+    const fallback = await findSubmissionWithJobByHash(normalizedHash);
     if (fallback?.jobId) {
       return res.status(202).json({
         jobId: fallback.jobId,
@@ -148,7 +148,7 @@ jobRouter.post('/jobs', async (req, res) => {
 jobRouter.get('/jobs/:jobId', async (req, res) => {
   const { jobId } = req.params;
 
-  const job = findJob(jobId);
+  const job = await findJob(jobId);
 
   if (!job) {
     return res.status(404).json({ error: 'Job not found' });

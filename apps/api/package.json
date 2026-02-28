@@ -12,8 +12,7 @@
   },
   "dependencies": {
     "@insightboard/shared": "1.0.0",
-    "@types/better-sqlite3": "^7.6.13",
-    "better-sqlite3": "^12.6.2",
+    "@neondatabase/serverless": "^0.10.4",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",

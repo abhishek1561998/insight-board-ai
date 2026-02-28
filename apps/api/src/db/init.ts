@@ -1,4 +1,4 @@
 import { initDatabase } from './client.js';
 
-initDatabase();
+await initDatabase();
 console.log('Database initialized.');

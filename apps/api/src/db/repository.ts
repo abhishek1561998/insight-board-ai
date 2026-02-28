@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { db } from './client.js';
+import { sql } from './client.js';
 
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
@@ -29,104 +29,128 @@ export type JobRow = {
   updatedAt: string;
 };
 
-const findSubmissionStmt = db.prepare(`
-  SELECT
-    s.id AS submissionId,
-    s.transcript AS transcript,
-    s.normalized_hash AS normalizedHash,
-    j.id AS jobId,
-    j.status AS status,
-    j.error AS error,
-    j.graph_json AS graphJson,
-    j.source_model AS sourceModel,
-    j.created_at AS jobCreatedAt,
-    j.updated_at AS jobUpdatedAt
-  FROM submissions s
-  JOIN jobs j ON j.submission_id = s.id
-  WHERE s.normalized_hash = ?
-`);
+export async function findSubmissionWithJobByHash(
+  normalizedHash: string,
+): Promise<SubmissionJobRow | null> {
+  const rows = await sql`
+    SELECT
+      s.id AS "submissionId",
+      s.transcript AS transcript,
+      s.normalized_hash AS "normalizedHash",
+      j.id AS "jobId",
+      j.status AS status,
+      j.error AS error,
+      j.graph_json AS "graphJson",
+      j.source_model AS "sourceModel",
+      j.created_at AS "jobCreatedAt",
+      j.updated_at AS "jobUpdatedAt"
+    FROM submissions s
+    JOIN jobs j ON j.submission_id = s.id
+    WHERE s.normalized_hash = ${normalizedHash}
+  `;
 
-const findJobStmt = db.prepare(`
-  SELECT
-    j.id AS jobId,
-    j.submission_id AS submissionId,
-    j.status AS status,
-    j.error AS error,
-    j.graph_json AS graphJson,
-    j.source_model AS sourceModel,
-    s.transcript AS transcript,
-    j.created_at AS createdAt,
-    j.updated_at AS updatedAt
-  FROM jobs j
-  JOIN submissions s ON s.id = j.submission_id
-  WHERE j.id = ?
-`);
+  if (rows.length === 0) {
+    return null;
+  }
 
-const createSubmissionStmt = db.prepare(`
-  INSERT INTO submissions (id, transcript, normalized_hash, created_at, updated_at)
-  VALUES (?, ?, ?, ?, ?)
-`);
+  const row = rows[0];
+  return {
+    submissionId: row.submissionId as string,
+    transcript: row.transcript as string,
+    normalizedHash: row.normalizedHash as string,
+    jobId: row.jobId as string,
+    status: row.status as JobStatus,
+    error: row.error as string | null,
+    graphJson: row.graphJson as string | null,
+    sourceModel: row.sourceModel as string | null,
+    jobCreatedAt: row.jobCreatedAt as string,
+    jobUpdatedAt: row.jobUpdatedAt as string,
+  };
+}
 
-const createJobStmt = db.prepare(`
-  INSERT INTO jobs (id, submission_id, status, created_at, updated_at)
-  VALUES (?, ?, ?, ?, ?)
-`);
-
-const updateJobProcessingStmt = db.prepare(`
-  UPDATE jobs
-  SET status = 'processing', error = NULL, updated_at = ?
-  WHERE id = ?
-`);
-
-const updateJobCompletedStmt = db.prepare(`
-  UPDATE jobs
-  SET status = 'completed', graph_json = ?, source_model = ?, error = NULL, updated_at = ?
-  WHERE id = ?
-`);
-
-const updateJobFailedStmt = db.prepare(`
-  UPDATE jobs
-  SET status = 'failed', error = ?, updated_at = ?
-  WHERE id = ?
-`);
-
-const createSubmissionWithJobTx = db.transaction((transcript: string, normalizedHash: string) => {
+export async function createSubmissionWithJob(
+  transcript: string,
+  normalizedHash: string,
+): Promise<{ submissionId: string; jobId: string }> {
   const now = new Date().toISOString();
   const submissionId = randomUUID();
   const jobId = randomUUID();
 
-  createSubmissionStmt.run(submissionId, transcript, normalizedHash, now, now);
-  createJobStmt.run(jobId, submissionId, 'pending', now, now);
+  await sql`
+    INSERT INTO submissions (id, transcript, normalized_hash, created_at, updated_at)
+    VALUES (${submissionId}, ${transcript}, ${normalizedHash}, ${now}, ${now})
+  `;
 
+  await sql`
+    INSERT INTO jobs (id, submission_id, status, created_at, updated_at)
+    VALUES (${jobId}, ${submissionId}, 'pending', ${now}, ${now})
+  `;
+
+  return { submissionId, jobId };
+}
+
+export async function findJob(jobId: string): Promise<JobRow | null> {
+  const rows = await sql`
+    SELECT
+      j.id AS "jobId",
+      j.submission_id AS "submissionId",
+      j.status AS status,
+      j.error AS error,
+      j.graph_json AS "graphJson",
+      j.source_model AS "sourceModel",
+      s.transcript AS transcript,
+      j.created_at AS "createdAt",
+      j.updated_at AS "updatedAt"
+    FROM jobs j
+    JOIN submissions s ON s.id = j.submission_id
+    WHERE j.id = ${jobId}
+  `;
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const row = rows[0];
   return {
-    submissionId,
-    jobId,
+    jobId: row.jobId as string,
+    submissionId: row.submissionId as string,
+    status: row.status as JobStatus,
+    error: row.error as string | null,
+    graphJson: row.graphJson as string | null,
+    sourceModel: row.sourceModel as string | null,
+    transcript: row.transcript as string,
+    createdAt: row.createdAt as string,
+    updatedAt: row.updatedAt as string,
   };
-});
-
-export function findSubmissionWithJobByHash(normalizedHash: string): SubmissionJobRow | null {
-  return (findSubmissionStmt.get(normalizedHash) as SubmissionJobRow | undefined) ?? null;
 }
 
-export function createSubmissionWithJob(transcript: string, normalizedHash: string): {
-  submissionId: string;
-  jobId: string;
-} {
-  return createSubmissionWithJobTx(transcript, normalizedHash);
+export async function markJobProcessing(jobId: string): Promise<void> {
+  const now = new Date().toISOString();
+  await sql`
+    UPDATE jobs
+    SET status = 'processing', error = NULL, updated_at = ${now}
+    WHERE id = ${jobId}
+  `;
 }
 
-export function findJob(jobId: string): JobRow | null {
-  return (findJobStmt.get(jobId) as JobRow | undefined) ?? null;
+export async function markJobCompleted(
+  jobId: string,
+  graphJson: string,
+  sourceModel: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await sql`
+    UPDATE jobs
+    SET status = 'completed', graph_json = ${graphJson}, source_model = ${sourceModel}, error = NULL, updated_at = ${now}
+    WHERE id = ${jobId}
+  `;
 }
 
-export function markJobProcessing(jobId: string): void {
-  updateJobProcessingStmt.run(new Date().toISOString(), jobId);
-}
-
-export function markJobCompleted(jobId: string, graphJson: string, sourceModel: string): void {
-  updateJobCompletedStmt.run(graphJson, sourceModel, new Date().toISOString(), jobId);
-}
-
-export function markJobFailed(jobId: string, errorMessage: string): void {
-  updateJobFailedStmt.run(errorMessage, new Date().toISOString(), jobId);
+export async function markJobFailed(jobId: string, errorMessage: string): Promise<void> {
+  const now = new Date().toISOString();
+  await sql`
+    UPDATE jobs
+    SET status = 'failed', error = ${errorMessage}, updated_at = ${now}
+    WHERE id = ${jobId}
+  `;
 }
