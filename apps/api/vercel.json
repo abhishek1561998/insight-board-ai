@@ -1,17 +1,20 @@
 {
   "version": 2,
-  "buildCommand": "npm run build -w @insightboard/shared && npm run build -w @insightboard/api",
-  "installCommand": "npm install",
-  "outputDirectory": ".",
+  "buildCommand": "cd ../.. && npm run build -w @insightboard/shared && npm run build -w @insightboard/api",
+  "installCommand": "cd ../.. && npm install",
+  "functions": {
+    "src/handler.ts": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/src/handler.ts"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/src/handler.ts"
     }
-  ],
-  "functions": {
-    "api/index.ts": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
