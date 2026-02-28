@@ -1,0 +1,25 @@
+{
+  "name": "insightboard-dependency-engine",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm run build -w @insightboard/shared",
+    "predev": "npm run build -w @insightboard/shared",
+    "dev": "concurrently \"npm run dev -w @insightboard/api\" \"npm run dev -w @insightboard/web\"",
+    "build": "npm run build -w @insightboard/shared && npm run build -w @insightboard/api && npm run build -w @insightboard/web",
+    "test": "npm run build -w @insightboard/shared && npm run test -w @insightboard/api",
+    "sample:run": "node scripts/submit-sample.mjs",
+    "db:init": "npm run db:init -w @insightboard/api",
+    "lint": "npm run lint -ws --if-present",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  }
+}

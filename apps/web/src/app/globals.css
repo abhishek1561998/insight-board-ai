@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --bg-1: #071320;
+  --bg-2: #0f2741;
+  --panel: rgba(6, 15, 30, 0.72);
+  --text: #eaf4ff;
+  --muted: #9ab4cf;
+  --ready: #22c55e;
+  --blocked: #f59e0b;
+  --error: #ef4444;
+  --completed: #38bdf8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 10%, #153a66 0%, transparent 34%),
+    radial-gradient(circle at 88% 22%, #123e4d 0%, transparent 36%),
+    linear-gradient(145deg, var(--bg-1), var(--bg-2));
+}
+
+body {
+  font-family: var(--font-sans), sans-serif;
+}
+
+.surface {
+  background: var(--panel);
+  border: 1px solid rgba(178, 211, 245, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.card-animate {
+  animation: rise 440ms ease;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
